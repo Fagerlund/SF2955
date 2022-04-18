@@ -1,6 +1,6 @@
 clear all; close all; clc
 %Part 1
-rng(19)
+%rng(19)
 sigma=0.5; deltaT=0.5; alpha = 0.6;
 P=1/20*[[16,1,1,1,1];[1,16,1,1,1];[1,1,16,1,1];[1,1,1,16,1];[1,1,1,1,16]];
 zn=[[0,0];[3.5,0];[0,3.5];[0,-3.5];[-3.5,0]];
@@ -19,7 +19,7 @@ phiz=[[phiz,zeros(3,1)];[zeros(3,1),phiz]];
 phiw=[[phiw,zeros(3,1)];[zeros(3,1),phiw]];
 
 X0=mvnrnd(zero,sigmamatrix);
-Command=round(rand(1)*4)+1;
+Command=randi([1 5],1,1);
 Z0=zn(Command,:);
 
 
@@ -56,53 +56,102 @@ title('Randomized path, seed 19, m=3000')
 xlabel('X1 location') 
 ylabel('X2 location')
 
-
-%% Part 3
-
+%% Making of a nxN state matrix for use in part 3 
 v=90; zeta=1.5; gamma=3; 
 
 load("stations.mat");
-load("RSSI-measurements.mat");
 
+load("RSSI-measurements.mat");
 
 N=10000;
 n=length(Y);
+Command=randi([1 5],1,N);
+Commands=zeros(N,n);
+Commands(:,1)=Command;
+for j=1:N
+    
+    for i =1:n
+        Update=(rand(1));
+        summ=0;
+        for k=1:5
 
-tau=zeros(2,n);
+            summ=P(round(Commands(j,i)),k)+summ;
+            if Update<=summ
+                Command=k;
+                break
+            end
+
+        end
+        Commands(j,i+1)=Command;
+         
+    end
+    
+end
+
+%% Part 3
+
+
+
+tau=zeros(6,n);
 Xi=transpose(mvnrnd(zero,sigmamatrix,N)); %Initilization
 
-p = @(x1,x2,y) 1/(2*pi*zeta^2)^3*exp(-1/2*(sum(y)*ones(1,N)-(6*v*ones(1,N)-10*gamma*log10(vecnorm(([x1;x2]-pos_vec(:,1).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,2).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,3).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,4).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,5).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,6).*ones(2,N)))))));
+%p = @(x1,x2,y) prod(normpdf(Y,(6*v*ones(1,N)-10*gamma*log10(vecnorm(([x1;x2]-pos_vec(:,1).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,2).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,3).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,4).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,5).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,6).*ones(2,N))))),zeta),2);%1/(2*pi*zeta^2)^3*exp(-1/2*(sum(y)*ones(1,N)-(6*v*ones(1,N)-10*gamma*log10(vecnorm(([x1;x2]-pos_vec(:,1).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,2).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,3).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,4).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,5).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,6).*ones(2,N)))))));
 w = p(Xi(1,:),Xi(4,:),Y(:,1));
 tau(1,1) = sum(Xi(1,:).*w)/sum(w);
 tau(2,1) = sum(Xi(4,:).*w)/sum(w);
 
 Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
 
-Command=randi([1 5],1,N);
-Z0=zn(Command,:);
-Zi=transpose(Z0);
+
+Zi=transpose(zn(Commands(:,1),:));
 for k = 1:n-1 % main loop
     Xi=theta*(Xi)+phiz*(Zi)+phiw*(Wi); %Calculate each new state
-    w =log( w.*p(Xi(1,:),Xi(4,:),Y(:,k+1))); % weighting
+    w =w.*log(p(Xi(1,:),Xi(4,:),Y(:,k+1))); % weighting REMOVE/INCLUDE LOG
     
+    Zi=transpose(zn(Commands(:,k+1),:));
+    Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
+    tau(1,k+1) =  sum(Xi(1,:).*w)/sum(w);
+    tau(2,k+1) =  sum(Xi(4,:).*w)/sum(w);
+end
+
+plot(tau(1,:),tau(2,:))
+hold on
+plot(pos_vec(1,1),pos_vec(2,1),'d')
+hold on
+plot(pos_vec(1,2),pos_vec(2,2),'d')
+hold on
+plot(pos_vec(1,3),pos_vec(2,3),'d')
+hold on
+plot(pos_vec(1,4),pos_vec(2,4),'d')
+hold on
+plot(pos_vec(1,5),pos_vec(2,5),'d')
+hold on
+plot(pos_vec(1,6),pos_vec(2,6),'d')
+
+
+%% Part 4
+
+
+tau=zeros(6,n);
+
+Xi=transpose(mvnrnd(zero,sigmamatrix,N)); %Initilization
+
+%p = @(x1,x2,y) prod(normpdf(Y,(6*v*ones(1,N)-10*gamma*log10(vecnorm(([x1;x2]-pos_vec(:,1).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,2).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,3).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,4).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,5).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,6).*ones(2,N))))),zeta),2);%1/(2*pi*zeta^2)^3*exp(-1/2*(sum(y)*ones(1,N)-(6*v*ones(1,N)-10*gamma*log10(vecnorm(([x1;x2]-pos_vec(:,1).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,2).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,3).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,4).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,5).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,6).*ones(2,N)))))));
+w = p(Xi(1,:),Xi(4,:),Y(:,1));
+tau(1,1) = sum(Xi(1,:).*w)/sum(w);
+tau(2,1) = sum(Xi(4,:).*w)/sum(w);
+
+Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
+
+
+Zi=transpose(zn(Commands(:,1),:));
+for k = 1:n-1 % main loop
+    ind=randsample(N,N,true,w);
+    Xi=Xi(:,ind);
+    Xi=theta*(Xi)+phiz*(Zi)+phiw*(Wi); %Calculate each new state
+    w =(p(Xi(1,:),Xi(4,:),Y(:,k+1))); % weighting REMOVE/INCLUDE LOG
     
-    %https://stackoverflow.com/questions/47924324/how-to-assign-a-set-of-numbers-randomly-to-a-matrix-in-r
-    Updated=rand(1,N);
-    Updated( Updated < 0.8 ) = nan;
-    indexes=find(~isnan(Updated));
-    
-    Update=(rand(1));
-    summ=0;
-    for j=1:5
-        
-        summ=P(Command,j)+summ;
-        if Update<summ
-            Command=j;
-            break
-        end
-        
-    end
-    Zi=transpose(zn(Command,:));
+    Zi=transpose(zn(Commands(:,k+1),:));
     Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
     tau(1,k+1) =  sum(Xi(1,:).*w)/sum(w);
     tau(2,k+1) =  sum(Xi(4,:).*w)/sum(w);
