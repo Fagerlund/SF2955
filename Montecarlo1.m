@@ -224,3 +224,59 @@ hold on
 plot(pos_vec(1,5),pos_vec(2,5),'d')
 hold on
 plot(pos_vec(1,6),pos_vec(2,6),'d')
+
+%% Part 5
+
+load("RSSI-measurements-unknown-sigma.mat")
+T = 100;
+
+tau=zeros(6,n);
+
+Xi=transpose(mvnrnd(zero,sigmamatrix,N)); %Initilization
+
+%p = @(x1,x2,y) prod(normpdf(Y,(6*v*ones(1,N)-10*gamma*log10(vecnorm(([x1;x2]-pos_vec(:,1).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,2).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,3).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,4).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,5).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,6).*ones(2,N))))),zeta),2);%1/(2*pi*zeta^2)^3*exp(-1/2*(sum(y)*ones(1,N)-(6*v*ones(1,N)-10*gamma*log10(vecnorm(([x1;x2]-pos_vec(:,1).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,2).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,3).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,4).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,5).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,6).*ones(2,N)))))));
+
+% choose sigma that gives maximum values
+sigmaRes = zeros(n,1);
+sigmaV = zeros(T,1);
+wmat = zeros(T,N);
+for j = 1:T
+    sigmaV(j) = rand(1)*3;
+    wmat(j,:) = p5(Xi(1,:),Xi(4,:),Y(:,1),sigmaV(j)); % weighting REMOVE/INCLUDE LOG
+end
+[wmax,wind] = max(sum(wmat,2));
+w = wmat(wind,:);
+sigmaRes(k+1) = sigmaV(wind);
+
+tau(1,1) = sum(Xi(1,:).*w)/sum(w);
+tau(2,1) = sum(Xi(4,:).*w)/sum(w);
+
+Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
+
+
+Zi=transpose(zn(Commands(:,1),:));
+for k = 1:n-1 % main loop
+    ind=randsample(N,N,true,w);
+    Xi=Xi(:,ind);
+    Xi=theta*(Xi)+phiz*(Zi)+phiw*(Wi); %Calculate each new state
+    
+    % --------- Sigma part ---------
+    for j = 1:T
+        sigmaV(j) = rand(1)*3;
+        wmat(j,:) = (p5(Xi(1,:),Xi(4,:),Y(:,k+1),sigmaV(j))); % weighting REMOVE/INCLUDE LOG
+    end
+    temp = sum(w,2);
+    [wmax,wind] = max(sum(wmat,2));
+    w = wmat(wind,:);
+    sigmaRes(k+1) = sigmaV(wind);
+    % ---------         ----------
+    
+    Zi=transpose(zn(Commands(:,k+1),:));
+    Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
+    tau(1,k+1) =  sum(Xi(1,:).*w)/sum(w);
+    tau(2,k+1) =  sum(Xi(4,:).*w)/sum(w);
+end
+
+plot(tau(1,:),tau(2,:))
+hold on
+plot(pos_vec(1,1),pos_vec(2,1),'d')
