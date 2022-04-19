@@ -104,7 +104,7 @@ Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
 
 
 Zi=transpose(zn(Commands(:,1),:));
-for k = 1:20-1 % main loop
+for k = 1:500 % main loop
     Xi=theta*(Xi)+phiz*(Zi)+phiw*(Wi); %Calculate each new state
     w =w.*(p(Xi(1,:),Xi(4,:),Y(:,k+1))); % weighting REMOVE/INCLUDE LOG
     
@@ -129,8 +129,8 @@ hold on
 plot(pos_vec(1,5),pos_vec(2,5),'d')
 hold on
 plot(pos_vec(1,6),pos_vec(2,6),'d')
-figure
-hist(w)
+%figure
+%hist(w)
 ESSM=1/(sum((w/sum(w)).^2))
 
 %% Part 3 Instructed weight adjustment
@@ -152,7 +152,7 @@ Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
 
 
 Zi=transpose(zn(Commands(:,1),:));
-for k = 1:200-1 % main loop
+for k = 1:500 % main loop
     Xi=theta*(Xi)+phiz*(Zi)+phiw*(Wi); %Calculate each new state
     w =log(w.*p(Xi(1,:),Xi(4,:),Y(:,k+1))); % weighting REMOVE/INCLUDE LOG
     L=max(w);
@@ -162,7 +162,6 @@ for k = 1:200-1 % main loop
     Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
     tau(1,k+1) =  sum(Xi(1,:).*w)/sum(w);
     tau(2,k+1) =  sum(Xi(4,:).*w)/sum(w);
-    ESSM=1/(sum((w/sum(w)).^2))
 end
 
 plot(tau(1,:),tau(2,:))
@@ -179,9 +178,9 @@ hold on
 plot(pos_vec(1,5),pos_vec(2,5),'d')
 hold on
 plot(pos_vec(1,6),pos_vec(2,6),'d')
-figure
-title("Histogram n=70")
-hist(w)
+%figure
+%title("Histogram n=70")
+%hist(w)
 ESSM=1/(sum((w/sum(w)).^2))
 %% Part 4
 
@@ -199,7 +198,7 @@ Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
 
 
 Zi=transpose(zn(Commands(:,1),:));
-for k = 1:n-1 % main loop
+for k = 1:500 % main loop
     ind=randsample(N,N,true,w);
     Xi=Xi(:,ind);
     Xi=theta*(Xi)+phiz*(Zi)+phiw*(Wi); %Calculate each new state
@@ -225,5 +224,3 @@ hold on
 plot(pos_vec(1,5),pos_vec(2,5),'d')
 hold on
 plot(pos_vec(1,6),pos_vec(2,6),'d')
-
-
