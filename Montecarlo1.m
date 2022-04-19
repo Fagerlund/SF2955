@@ -96,7 +96,7 @@ tau=zeros(6,n);
 Xi=transpose(mvnrnd(zero,sigmamatrix,N)); %Initilization
 
 %p = @(x1,x2,y) prod(normpdf(Y,(6*v*ones(1,N)-10*gamma*log10(vecnorm(([x1;x2]-pos_vec(:,1).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,2).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,3).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,4).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,5).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,6).*ones(2,N))))),zeta),2);%1/(2*pi*zeta^2)^3*exp(-1/2*(sum(y)*ones(1,N)-(6*v*ones(1,N)-10*gamma*log10(vecnorm(([x1;x2]-pos_vec(:,1).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,2).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,3).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,4).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,5).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,6).*ones(2,N)))))));
-w = p(Xi(1,:),Xi(4,:),Y(:,1));
+w = (p(Xi(1,:),Xi(4,:),Y(:,1)));
 tau(1,1) = sum(Xi(1,:).*w)/sum(w);
 tau(2,1) = sum(Xi(4,:).*w)/sum(w);
 
@@ -104,10 +104,11 @@ Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
 
 
 Zi=transpose(zn(Commands(:,1),:));
-for k = 1:n-1 % main loop
+for k = 1:20-1 % main loop
     Xi=theta*(Xi)+phiz*(Zi)+phiw*(Wi); %Calculate each new state
-    w =w.*log(p(Xi(1,:),Xi(4,:),Y(:,k+1))); % weighting REMOVE/INCLUDE LOG
+    w =w.*(p(Xi(1,:),Xi(4,:),Y(:,k+1))); % weighting REMOVE/INCLUDE LOG
     
+    %w=w/sum(w);
     Zi=transpose(zn(Commands(:,k+1),:));
     Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
     tau(1,k+1) =  sum(Xi(1,:).*w)/sum(w);
@@ -115,6 +116,7 @@ for k = 1:n-1 % main loop
 end
 
 plot(tau(1,:),tau(2,:))
+title("SIS, N=10000")
 hold on
 plot(pos_vec(1,1),pos_vec(2,1),'d')
 hold on
@@ -127,12 +129,64 @@ hold on
 plot(pos_vec(1,5),pos_vec(2,5),'d')
 hold on
 plot(pos_vec(1,6),pos_vec(2,6),'d')
+figure
+hist(w)
+ESSM=1/(sum((w/sum(w)).^2))
 
+%% Part 3 Instructed weight adjustment
 
-%% Part 4
 
 
 tau=zeros(6,n);
+Xi=transpose(mvnrnd(zero,sigmamatrix,N)); %Initilization
+
+%p = @(x1,x2,y) prod(normpdf(Y,(6*v*ones(1,N)-10*gamma*log10(vecnorm(([x1;x2]-pos_vec(:,1).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,2).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,3).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,4).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,5).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,6).*ones(2,N))))),zeta),2);%1/(2*pi*zeta^2)^3*exp(-1/2*(sum(y)*ones(1,N)-(6*v*ones(1,N)-10*gamma*log10(vecnorm(([x1;x2]-pos_vec(:,1).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,2).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,3).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,4).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,5).*ones(2,N)))+vecnorm(([x1;x2]-pos_vec(:,6).*ones(2,N)))))));
+w = log(p(Xi(1,:),Xi(4,:),Y(:,1)));
+L=max(w);
+w=exp(w-L);
+w=w/sum(w);
+tau(1,1) = sum(Xi(1,:).*w)/sum(w);
+tau(2,1) = sum(Xi(4,:).*w)/sum(w);
+
+Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
+
+
+Zi=transpose(zn(Commands(:,1),:));
+for k = 1:200-1 % main loop
+    Xi=theta*(Xi)+phiz*(Zi)+phiw*(Wi); %Calculate each new state
+    w =log(w.*p(Xi(1,:),Xi(4,:),Y(:,k+1))); % weighting REMOVE/INCLUDE LOG
+    L=max(w);
+    w=exp(w-L);
+    w=w/sum(w);
+    Zi=transpose(zn(Commands(:,k+1),:));
+    Wi=transpose(mvnrnd([0,0],sigma^2*eye(2),N));
+    tau(1,k+1) =  sum(Xi(1,:).*w)/sum(w);
+    tau(2,k+1) =  sum(Xi(4,:).*w)/sum(w);
+    ESSM=1/(sum((w/sum(w)).^2))
+end
+
+plot(tau(1,:),tau(2,:))
+title("SIS, N=10000")
+hold on
+plot(pos_vec(1,1),pos_vec(2,1),'d')
+hold on
+plot(pos_vec(1,2),pos_vec(2,2),'d')
+hold on
+plot(pos_vec(1,3),pos_vec(2,3),'d')
+hold on
+plot(pos_vec(1,4),pos_vec(2,4),'d')
+hold on
+plot(pos_vec(1,5),pos_vec(2,5),'d')
+hold on
+plot(pos_vec(1,6),pos_vec(2,6),'d')
+figure
+title("Histogram n=70")
+hist(w)
+ESSM=1/(sum((w/sum(w)).^2))
+%% Part 4
+
+
+tau=zeros(2,n);
 
 Xi=transpose(mvnrnd(zero,sigmamatrix,N)); %Initilization
 
@@ -158,6 +212,7 @@ for k = 1:n-1 % main loop
 end
 
 plot(tau(1,:),tau(2,:))
+title("SISR N=10000")
 hold on
 plot(pos_vec(1,1),pos_vec(2,1),'d')
 hold on
@@ -170,4 +225,5 @@ hold on
 plot(pos_vec(1,5),pos_vec(2,5),'d')
 hold on
 plot(pos_vec(1,6),pos_vec(2,6),'d')
+
 
